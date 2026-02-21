@@ -6,36 +6,43 @@ package store
 
 import "sync"
 
-// MessageStore maps trigger IDs to Telegram message IDs.
+// Entry holds the data persisted for a single PROBLEM event.
+type Entry struct {
+	MessageID int
+	StartTime string
+	Message   string
+}
+
+// MessageStore maps event IDs to Entry values.
 type MessageStore struct {
 	mu   sync.RWMutex
-	data map[string]int
+	data map[string]Entry
 }
 
 // New creates and returns an empty MessageStore.
 func New() *MessageStore {
-	return &MessageStore{data: make(map[string]int)}
+	return &MessageStore{data: make(map[string]Entry)}
 }
 
-// Set stores the Telegram message ID for the given trigger ID.
-func (s *MessageStore) Set(triggerID string, messageID int) {
+// Set stores an Entry for the given event ID.
+func (s *MessageStore) Set(eventID string, entry Entry) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.data[triggerID] = messageID
+	s.data[eventID] = entry
 }
 
-// Get returns the Telegram message ID for the given trigger ID, and a boolean
-// indicating whether the entry exists.
-func (s *MessageStore) Get(triggerID string) (int, bool) {
+// Get returns the Entry for the given event ID, and a boolean indicating
+// whether the entry exists.
+func (s *MessageStore) Get(eventID string) (Entry, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	id, ok := s.data[triggerID]
-	return id, ok
+	e, ok := s.data[eventID]
+	return e, ok
 }
 
-// Delete removes the entry for the given trigger ID.
-func (s *MessageStore) Delete(triggerID string) {
+// Delete removes the entry for the given event ID.
+func (s *MessageStore) Delete(eventID string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	delete(s.data, triggerID)
+	delete(s.data, eventID)
 }
