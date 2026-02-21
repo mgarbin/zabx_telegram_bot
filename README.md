@@ -18,16 +18,38 @@ Key behaviour:
 
 ## Configuration
 
-All configuration is provided through environment variables.
+Configuration can be provided through **environment variables**, an external
+**YAML file**, or a combination of both. Environment variables always take
+precedence over file values.
+
+### Environment variables
 
 | Variable             | Required | Default | Description                                        |
 |----------------------|----------|---------|----------------------------------------------------|
 | `TELEGRAM_BOT_TOKEN` | ✅       |         | Bot token from [@BotFather](https://t.me/BotFather) |
 | `TELEGRAM_CHAT_ID`   | ✅       |         | Numeric ID of the target group chat                |
 | `SERVER_ADDR`        | ❌       | `:8080` | Address the HTTP server listens on                 |
+| `CONFIG_FILE`        | ❌       | `config.yaml` | Path to an optional YAML configuration file  |
 
 > **Finding the chat ID** – Add the bot to the group, send a message, then call
 > `https://api.telegram.org/bot<TOKEN>/getUpdates` to find the `chat.id` value.
+
+### YAML configuration file
+
+By default the bot looks for a `config.yaml` file in the current working
+directory. If the file does not exist, environment variables must supply all
+required values. Set `CONFIG_FILE` to use a different path (the bot returns an
+error if that explicit path does not exist).
+
+```yaml
+telegram_bot_token: "123456:ABC-DEF..."
+telegram_chat_id: "-100987654321"
+
+# Optional – defaults to :8080
+# server_addr: ":8080"
+```
+
+A ready-to-edit template is provided as `config.yaml.example`.
 
 ---
 
