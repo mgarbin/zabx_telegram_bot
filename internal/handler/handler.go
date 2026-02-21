@@ -67,8 +67,8 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if alert.TriggerID == "" {
-		http.Error(w, "trigger_id is required", http.StatusBadRequest)
+	if alert.EventID == "" {
+		http.Error(w, "event_id is required", http.StatusBadRequest)
 		return
 	}
 
@@ -83,42 +83,42 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case StatusProblem:
 		msgID, err := h.bot.SendMessage(text)
 		if err != nil {
-			log.Printf("ERROR sending Telegram message for trigger %s: %v", alert.TriggerID, err)
+			log.Printf("ERROR sending Telegram message for event %s: %v", alert.EventID, err)
 			http.Error(w, "failed to send Telegram message", http.StatusInternalServerError)
 			return
 		}
-		h.store.Set(alert.TriggerID, msgID)
-		log.Printf("PROBLEM alert sent for trigger %s (message %d)", alert.TriggerID, msgID)
+		h.store.Set(alert.EventID, msgID)
+		log.Printf("PROBLEM alert sent for event %s (message %d)", alert.EventID, msgID)
 
 	case StatusResolved:
-		if msgID, ok := h.store.Get(alert.TriggerID); ok {
+		if msgID, ok := h.store.Get(alert.EventID); ok {
 			if err := h.bot.EditMessage(msgID, text); err != nil {
-				log.Printf("ERROR editing Telegram message %d for trigger %s: %v", msgID, alert.TriggerID, err)
+				log.Printf("ERROR editing Telegram message %d for event %s: %v", msgID, alert.EventID, err)
 				http.Error(w, "failed to edit Telegram message", http.StatusInternalServerError)
 				return
 			}
-			h.store.Delete(alert.TriggerID)
-			log.Printf("RESOLVED alert updated for trigger %s (message %d)", alert.TriggerID, msgID)
+			h.store.Delete(alert.EventID)
+			log.Printf("RESOLVED alert updated for event %s (message %d)", alert.EventID, msgID)
 		} else {
 			// No tracked message found – send a new one so the resolution is not lost.
 			msgID, err := h.bot.SendMessage(text)
 			if err != nil {
-				log.Printf("ERROR sending Telegram message for resolved trigger %s: %v", alert.TriggerID, err)
+				log.Printf("ERROR sending Telegram message for resolved event %s: %v", alert.EventID, err)
 				http.Error(w, "failed to send Telegram message", http.StatusInternalServerError)
 				return
 			}
-			log.Printf("RESOLVED alert sent (no prior message tracked) for trigger %s (message %d)", alert.TriggerID, msgID)
+			log.Printf("RESOLVED alert sent (no prior message tracked) for event %s (message %d)", alert.EventID, msgID)
 		}
 
 	default:
 		// Unknown status – send as a plain informational message.
 		msgID, err := h.bot.SendMessage(text)
 		if err != nil {
-			log.Printf("ERROR sending Telegram message for trigger %s: %v", alert.TriggerID, err)
+			log.Printf("ERROR sending Telegram message for event %s: %v", alert.EventID, err)
 			http.Error(w, "failed to send Telegram message", http.StatusInternalServerError)
 			return
 		}
-		log.Printf("INFO alert sent for trigger %s (message %d)", alert.TriggerID, msgID)
+		log.Printf("INFO alert sent for event %s (message %d)", alert.EventID, msgID)
 	}
 
 	w.WriteHeader(http.StatusOK)
@@ -130,7 +130,9 @@ func formatMessage(a ZabbixAlert) string {
 
 	statusEmoji := statusEmoji(a.Status)
 	sb.WriteString(fmt.Sprintf("%s <b>%s</b>\n", statusEmoji, escapeHTML(string(a.Status))))
-	sb.WriteString(fmt.Sprintf("🔔 <b>Trigger:</b> %s\n", escapeHTML(a.TriggerName)))
+	if a.TriggerName != "" {
+		sb.WriteString(fmt.Sprintf("🔔 <b>Trigger:</b> %s\n", escapeHTML(a.TriggerName)))
+	}
 	if a.Host != "" {
 		sb.WriteString(fmt.Sprintf("🖥 <b>Host:</b> %s\n", escapeHTML(a.Host)))
 	}

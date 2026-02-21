@@ -49,6 +49,7 @@ func TestProblemSendsNewMessage(t *testing.T) {
 	h := handler.New(mb, s, "")
 
 	alert := handler.ZabbixAlert{
+		EventID:     "evt-100",
 		TriggerID:   "100",
 		TriggerName: "High CPU",
 		Status:      handler.StatusProblem,
@@ -61,10 +62,10 @@ func TestProblemSendsNewMessage(t *testing.T) {
 		t.Fatalf("expected 200, got %d", resp.Code)
 	}
 
-	// The message ID must have been stored.
-	msgID, ok := s.Get("100")
+	// The message ID must have been stored under event_id.
+	msgID, ok := s.Get("evt-100")
 	if !ok {
-		t.Fatal("expected trigger ID to be stored after PROBLEM alert")
+		t.Fatal("expected event ID to be stored after PROBLEM alert")
 	}
 	if msgID != 1 {
 		t.Fatalf("expected stored message ID 1, got %d", msgID)
@@ -78,16 +79,18 @@ func TestResolvedEditsExistingMessage(t *testing.T) {
 
 	// First: a PROBLEM alert.
 	postAlert(t, h, handler.ZabbixAlert{
+		EventID:     "evt-200",
 		TriggerID:   "200",
 		TriggerName: "Disk Full",
 		Status:      handler.StatusProblem,
 		Host:        "server2",
 	})
 
-	storedID, _ := s.Get("200")
+	storedID, _ := s.Get("evt-200")
 
-	// Then: a RESOLVED alert for the same trigger.
+	// Then: a RESOLVED alert for the same event.
 	resp := postAlert(t, h, handler.ZabbixAlert{
+		EventID:     "evt-200",
 		TriggerID:   "200",
 		TriggerName: "Disk Full",
 		Status:      handler.StatusResolved,
@@ -104,8 +107,8 @@ func TestResolvedEditsExistingMessage(t *testing.T) {
 	}
 
 	// The entry must be removed from the store after resolution.
-	if _, ok := s.Get("200"); ok {
-		t.Fatal("expected trigger to be removed from store after RESOLVED")
+	if _, ok := s.Get("evt-200"); ok {
+		t.Fatal("expected event to be removed from store after RESOLVED")
 	}
 }
 
@@ -115,7 +118,7 @@ func TestResolvedWithNoTrackedMessageSendsNew(t *testing.T) {
 	h := handler.New(mb, s, "")
 
 	resp := postAlert(t, h, handler.ZabbixAlert{
-		TriggerID:   "300",
+		EventID:     "evt-300",
 		TriggerName: "Memory Low",
 		Status:      handler.StatusResolved,
 	})
@@ -155,7 +158,7 @@ func TestInvalidJSON(t *testing.T) {
 	}
 }
 
-func TestMissingTriggerID(t *testing.T) {
+func TestMissingEventID(t *testing.T) {
 	h := handler.New(&mockBot{}, store.New(), "")
 	resp := postAlert(t, h, handler.ZabbixAlert{
 		TriggerName: "Some trigger",
@@ -163,7 +166,7 @@ func TestMissingTriggerID(t *testing.T) {
 	})
 
 	if resp.Code != http.StatusBadRequest {
-		t.Fatalf("expected 400 for missing trigger_id, got %d", resp.Code)
+		t.Fatalf("expected 400 for missing event_id, got %d", resp.Code)
 	}
 }
 
@@ -172,7 +175,7 @@ func TestSecretValidRequest(t *testing.T) {
 	h := handler.New(mb, store.New(), "mysecret")
 
 	resp := postAlert(t, h, handler.ZabbixAlert{
-		TriggerID:   "400",
+		EventID:     "evt-400",
 		TriggerName: "High CPU",
 		Status:      handler.StatusProblem,
 		Secret:      "mysecret",
@@ -187,7 +190,7 @@ func TestSecretWrongValue(t *testing.T) {
 	h := handler.New(&mockBot{}, store.New(), "mysecret")
 
 	resp := postAlert(t, h, handler.ZabbixAlert{
-		TriggerID:   "401",
+		EventID:     "evt-401",
 		TriggerName: "High CPU",
 		Status:      handler.StatusProblem,
 		Secret:      "wrongsecret",
@@ -202,7 +205,7 @@ func TestSecretMissing(t *testing.T) {
 	h := handler.New(&mockBot{}, store.New(), "mysecret")
 
 	resp := postAlert(t, h, handler.ZabbixAlert{
-		TriggerID:   "402",
+		EventID:     "evt-402",
 		TriggerName: "High CPU",
 		Status:      handler.StatusProblem,
 		// Secret omitted
@@ -218,7 +221,7 @@ func TestNoSecretConfiguredAllowsAnyRequest(t *testing.T) {
 	h := handler.New(mb, store.New(), "")
 
 	resp := postAlert(t, h, handler.ZabbixAlert{
-		TriggerID:   "403",
+		EventID:     "evt-403",
 		TriggerName: "High CPU",
 		Status:      handler.StatusProblem,
 		// No secret in body – should still be allowed when none configured
