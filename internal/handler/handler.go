@@ -27,7 +27,7 @@ const (
 	StatusProblem  AlertStatus = "PROBLEM"
 	StatusResolved AlertStatus = "RESOLVED"
 
-	timeFormat = "2006-01-02 15:04:05 UTC"
+	timeFormat = "2006-01-02 15:04:05 MST"
 )
 
 // ZabbixAlert is the JSON payload POSTed by Zabbix.
@@ -81,7 +81,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	switch alert.Status {
 	case StatusProblem:
-		now := time.Now().UTC()
+		now := time.Now()
 		text := formatMessage(alert, now, "", "")
 		msgID, err := h.bot.SendMessage(text)
 		if err != nil {
@@ -98,7 +98,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	case StatusResolved:
 		if entry, ok := h.store.Get(alert.EventID); ok {
-			text := formatMessage(alert, time.Now().UTC(), entry.StartTime, entry.Message)
+			text := formatMessage(alert, time.Now(), entry.StartTime, entry.Message)
 			if err := h.bot.EditMessage(entry.MessageID, text); err != nil {
 				log.Printf("ERROR editing Telegram message %d for event %s: %v", entry.MessageID, alert.EventID, err)
 				http.Error(w, "failed to edit Telegram message", http.StatusInternalServerError)
@@ -108,7 +108,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			log.Printf("RESOLVED alert updated for event %s (message %d)", alert.EventID, entry.MessageID)
 		} else {
 			// No tracked message found – send a new one so the resolution is not lost.
-			text := formatMessage(alert, time.Now().UTC(), "", "")
+			text := formatMessage(alert, time.Now(), "", "")
 			msgID, err := h.bot.SendMessage(text)
 			if err != nil {
 				log.Printf("ERROR sending Telegram message for resolved event %s: %v", alert.EventID, err)
@@ -120,7 +120,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	default:
 		// Unknown status – send as a plain informational message.
-		text := formatMessage(alert, time.Now().UTC(), "", "")
+		text := formatMessage(alert, time.Now(), "", "")
 		msgID, err := h.bot.SendMessage(text)
 		if err != nil {
 			log.Printf("ERROR sending Telegram message for event %s: %v", alert.EventID, err)
