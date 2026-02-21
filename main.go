@@ -3,14 +3,19 @@
 // from PROBLEM to RESOLVED the original Telegram message is edited in-place
 // rather than posting a duplicate.
 //
-// Required environment variables:
+// Configuration is read from an optional YAML file (default: config.yaml,
+// overridable via CONFIG_FILE) and/or environment variables. Environment
+// variables always take precedence over the file.
+//
+// Required (env var or config file):
 //
 //	TELEGRAM_BOT_TOKEN – bot token from BotFather
 //	TELEGRAM_CHAT_ID   – numeric ID of the target group chat
 //
-// Optional environment variables:
+// Optional:
 //
-//	SERVER_ADDR – listen address for the HTTP server (default ":8080")
+//	SERVER_ADDR  – listen address for the HTTP server (default ":8080")
+//	CONFIG_FILE  – path to the YAML configuration file (default "config.yaml")
 //
 // Endpoint:
 //
