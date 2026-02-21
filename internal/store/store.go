@@ -11,6 +11,7 @@ type Entry struct {
 	MessageID int
 	StartTime string
 	Message   string
+	Severity  string
 }
 
 // MessageStore maps event IDs to Entry values.

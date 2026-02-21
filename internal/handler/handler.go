@@ -93,11 +93,15 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			MessageID: msgID,
 			StartTime: now.Format(timeFormat),
 			Message:   alert.Message,
+			Severity:  alert.Severity,
 		})
 		log.Printf("PROBLEM alert sent for event %s (message %d)", alert.EventID, msgID)
 
 	case StatusResolved:
 		if entry, ok := h.store.Get(alert.EventID); ok {
+			if alert.Severity == "" && entry.Severity != "" {
+				alert.Severity = entry.Severity
+			}
 			text := formatMessage(alert, time.Now(), entry.StartTime, entry.Message)
 			if err := h.bot.EditMessage(entry.MessageID, text); err != nil {
 				log.Printf("ERROR editing Telegram message %d for event %s: %v", entry.MessageID, alert.EventID, err)
