@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/mgarbin/zabx_telegram_bot/internal/handler"
@@ -63,12 +64,12 @@ func TestProblemSendsNewMessage(t *testing.T) {
 	}
 
 	// The message ID must have been stored under event_id.
-	msgID, ok := s.Get("evt-100")
+	entry, ok := s.Get("evt-100")
 	if !ok {
 		t.Fatal("expected event ID to be stored after PROBLEM alert")
 	}
-	if msgID != 1 {
-		t.Fatalf("expected stored message ID 1, got %d", msgID)
+	if entry.MessageID != 1 {
+		t.Fatalf("expected stored message ID 1, got %d", entry.MessageID)
 	}
 }
 
@@ -86,7 +87,10 @@ func TestResolvedEditsExistingMessage(t *testing.T) {
 		Host:        "server2",
 	})
 
-	storedID, _ := s.Get("evt-200")
+	storedID := func() int {
+		entry, _ := s.Get("evt-200")
+		return entry.MessageID
+	}()
 
 	// Then: a RESOLVED alert for the same event.
 	resp := postAlert(t, h, handler.ZabbixAlert{
@@ -229,5 +233,83 @@ func TestNoSecretConfiguredAllowsAnyRequest(t *testing.T) {
 
 	if resp.Code != http.StatusOK {
 		t.Fatalf("expected 200 when no secret configured, got %d", resp.Code)
+	}
+}
+
+func TestProblemMessageContainsStartTime(t *testing.T) {
+	mb := &mockBot{}
+	h := handler.New(mb, store.New(), "")
+
+	postAlert(t, h, handler.ZabbixAlert{
+		EventID:     "evt-500",
+		TriggerName: "CPU High",
+		Status:      handler.StatusProblem,
+	})
+
+	if !strings.Contains(mb.sentText, "Start Time") {
+		t.Fatalf("expected PROBLEM message to contain 'Start Time', got: %s", mb.sentText)
+	}
+	if strings.Contains(mb.sentText, "End Time") {
+		t.Fatalf("expected PROBLEM message NOT to contain 'End Time', got: %s", mb.sentText)
+	}
+}
+
+func TestResolvedMessageContainsEndTime(t *testing.T) {
+	mb := &mockBot{}
+	h := handler.New(mb, store.New(), "")
+
+	postAlert(t, h, handler.ZabbixAlert{
+		EventID:     "evt-600",
+		TriggerName: "CPU High",
+		Status:      handler.StatusResolved,
+	})
+
+	if !strings.Contains(mb.sentText, "End Time") {
+		t.Fatalf("expected RESOLVED message (no prior) to contain 'End Time', got: %s", mb.sentText)
+	}
+}
+
+func TestResolvedEditsPreservesStartTimeAndMessage(t *testing.T) {
+	mb := &mockBot{}
+	s := store.New()
+	h := handler.New(mb, s, "")
+
+	// Send PROBLEM with a Details message.
+	postAlert(t, h, handler.ZabbixAlert{
+		EventID:     "evt-700",
+		TriggerName: "Disk Full",
+		Status:      handler.StatusProblem,
+		Host:        "server3",
+		Message:     "disk usage at 95%",
+	})
+
+	// Capture the Start Time that was stored.
+	entry, _ := s.Get("evt-700")
+	storedStartTime := entry.StartTime
+
+	// Send RESOLVED for the same event (with different/empty Message).
+	resp := postAlert(t, h, handler.ZabbixAlert{
+		EventID:     "evt-700",
+		TriggerName: "Disk Full",
+		Status:      handler.StatusResolved,
+		Host:        "server3",
+		Message:     "",
+	})
+
+	if resp.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", resp.Code)
+	}
+
+	// The edited message must contain the original Start Time.
+	if !strings.Contains(mb.editedText, storedStartTime) {
+		t.Fatalf("expected edited message to contain original Start Time %q, got: %s", storedStartTime, mb.editedText)
+	}
+	// The edited message must contain End Time.
+	if !strings.Contains(mb.editedText, "End Time") {
+		t.Fatalf("expected edited message to contain 'End Time', got: %s", mb.editedText)
+	}
+	// The edited message must preserve the original Details.
+	if !strings.Contains(mb.editedText, "disk usage at 95%") {
+		t.Fatalf("expected edited message to preserve original Details, got: %s", mb.editedText)
 	}
 }

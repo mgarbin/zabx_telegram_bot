@@ -26,6 +26,8 @@ type AlertStatus string
 const (
 	StatusProblem  AlertStatus = "PROBLEM"
 	StatusResolved AlertStatus = "RESOLVED"
+
+	timeFormat = "2006-01-02 15:04:05 UTC"
 )
 
 // ZabbixAlert is the JSON payload POSTed by Zabbix.
@@ -77,30 +79,36 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	text := formatMessage(alert)
-
 	switch alert.Status {
 	case StatusProblem:
+		now := time.Now().UTC()
+		text := formatMessage(alert, now, "", "")
 		msgID, err := h.bot.SendMessage(text)
 		if err != nil {
 			log.Printf("ERROR sending Telegram message for event %s: %v", alert.EventID, err)
 			http.Error(w, "failed to send Telegram message", http.StatusInternalServerError)
 			return
 		}
-		h.store.Set(alert.EventID, msgID)
+		h.store.Set(alert.EventID, store.Entry{
+			MessageID: msgID,
+			StartTime: now.Format(timeFormat),
+			Message:   alert.Message,
+		})
 		log.Printf("PROBLEM alert sent for event %s (message %d)", alert.EventID, msgID)
 
 	case StatusResolved:
-		if msgID, ok := h.store.Get(alert.EventID); ok {
-			if err := h.bot.EditMessage(msgID, text); err != nil {
-				log.Printf("ERROR editing Telegram message %d for event %s: %v", msgID, alert.EventID, err)
+		if entry, ok := h.store.Get(alert.EventID); ok {
+			text := formatMessage(alert, time.Now().UTC(), entry.StartTime, entry.Message)
+			if err := h.bot.EditMessage(entry.MessageID, text); err != nil {
+				log.Printf("ERROR editing Telegram message %d for event %s: %v", entry.MessageID, alert.EventID, err)
 				http.Error(w, "failed to edit Telegram message", http.StatusInternalServerError)
 				return
 			}
 			h.store.Delete(alert.EventID)
-			log.Printf("RESOLVED alert updated for event %s (message %d)", alert.EventID, msgID)
+			log.Printf("RESOLVED alert updated for event %s (message %d)", alert.EventID, entry.MessageID)
 		} else {
 			// No tracked message found – send a new one so the resolution is not lost.
+			text := formatMessage(alert, time.Now().UTC(), "", "")
 			msgID, err := h.bot.SendMessage(text)
 			if err != nil {
 				log.Printf("ERROR sending Telegram message for resolved event %s: %v", alert.EventID, err)
@@ -112,6 +120,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	default:
 		// Unknown status – send as a plain informational message.
+		text := formatMessage(alert, time.Now().UTC(), "", "")
 		msgID, err := h.bot.SendMessage(text)
 		if err != nil {
 			log.Printf("ERROR sending Telegram message for event %s: %v", alert.EventID, err)
@@ -125,7 +134,10 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 // formatMessage builds a human-readable HTML message from the alert payload.
-func formatMessage(a ZabbixAlert) string {
+// now is the current time used as Start Time (PROBLEM) or End Time (RESOLVED).
+// startTime, if non-empty, is the Start Time preserved from the original PROBLEM event.
+// origMessage, if non-empty, is the Details preserved from the original PROBLEM event.
+func formatMessage(a ZabbixAlert, now time.Time, startTime, origMessage string) string {
 	var sb strings.Builder
 
 	statusEmoji := statusEmoji(a.Status)
@@ -139,13 +151,25 @@ func formatMessage(a ZabbixAlert) string {
 	if a.Severity != "" {
 		sb.WriteString(fmt.Sprintf("⚠️ <b>Severity:</b> %s\n", escapeHTML(a.Severity)))
 	}
-	if a.Message != "" {
-		sb.WriteString(fmt.Sprintf("📝 <b>Details:</b> %s\n", escapeHTML(a.Message)))
+	// For RESOLVED, preserve the original Details from the PROBLEM event (if any).
+	msg := a.Message
+	if a.Status == StatusResolved && origMessage != "" {
+		msg = origMessage
+	}
+	if msg != "" {
+		sb.WriteString(fmt.Sprintf("📝 <b>Details:</b> %s\n", escapeHTML(msg)))
 	}
 	if a.EventID != "" {
 		sb.WriteString(fmt.Sprintf("🆔 <b>Event ID:</b> %s\n", escapeHTML(a.EventID)))
 	}
-	sb.WriteString(fmt.Sprintf("🕐 <b>Time:</b> %s", time.Now().UTC().Format("2006-01-02 15:04:05 UTC")))
+	if a.Status == StatusResolved {
+		if startTime != "" {
+			sb.WriteString(fmt.Sprintf("🕐 <b>Start Time:</b> %s\n", startTime))
+		}
+		sb.WriteString(fmt.Sprintf("🕑 <b>End Time:</b> %s", now.Format(timeFormat)))
+	} else {
+		sb.WriteString(fmt.Sprintf("🕐 <b>Start Time:</b> %s", now.Format(timeFormat)))
+	}
 
 	return sb.String()
 }
