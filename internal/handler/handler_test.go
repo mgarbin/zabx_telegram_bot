@@ -313,3 +313,36 @@ func TestResolvedEditsPreservesStartTimeAndMessage(t *testing.T) {
 		t.Fatalf("expected edited message to preserve original Details, got: %s", mb.editedText)
 	}
 }
+
+func TestResolvedEditsPreservesSeverity(t *testing.T) {
+	mb := &mockBot{}
+	s := store.New()
+	h := handler.New(mb, s, "")
+
+	// Send PROBLEM with a severity.
+	postAlert(t, h, handler.ZabbixAlert{
+		EventID:     "evt-800",
+		TriggerName: "High CPU",
+		Status:      handler.StatusProblem,
+		Severity:    "High",
+		Host:        "server4",
+	})
+
+	// Send RESOLVED without a severity (Zabbix may omit it on recovery).
+	resp := postAlert(t, h, handler.ZabbixAlert{
+		EventID:     "evt-800",
+		TriggerName: "High CPU",
+		Status:      handler.StatusResolved,
+		Severity:    "",
+		Host:        "server4",
+	})
+
+	if resp.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", resp.Code)
+	}
+
+	// The edited message must preserve the original Severity.
+	if !strings.Contains(mb.editedText, "High") {
+		t.Fatalf("expected edited message to preserve original Severity 'High', got: %s", mb.editedText)
+	}
+}
