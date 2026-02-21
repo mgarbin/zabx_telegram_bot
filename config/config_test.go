@@ -11,7 +11,7 @@ import (
 // clearEnv unsets all env vars used by config.Load so tests are isolated.
 func clearEnv(t *testing.T) {
 	t.Helper()
-	for _, key := range []string{"TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID", "SERVER_ADDR", "CONFIG_FILE"} {
+	for _, key := range []string{"TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID", "SERVER_ADDR", "SERVER_SECRET", "CONFIG_FILE"} {
 		os.Unsetenv(key)
 	}
 }
@@ -186,5 +186,79 @@ telegram_chat_id: "1234"
 	}
 	if cfg.ServerAddr != ":8080" {
 		t.Errorf("expected default addr ':8080', got %q", cfg.ServerAddr)
+	}
+}
+
+func TestLoadServerSecretFromYAML(t *testing.T) {
+	clearEnv(t)
+	path := writeYAML(t, `
+telegram_bot_token: "tok"
+telegram_chat_id: "1"
+server_secret: "yaml-secret"
+`)
+	os.Setenv("CONFIG_FILE", path)
+	defer os.Unsetenv("CONFIG_FILE")
+
+	cfg, err := config.Load()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cfg.ServerSecret != "yaml-secret" {
+		t.Errorf("expected server_secret 'yaml-secret', got %q", cfg.ServerSecret)
+	}
+}
+
+func TestLoadServerSecretFromEnv(t *testing.T) {
+	clearEnv(t)
+	os.Setenv("TELEGRAM_BOT_TOKEN", "tok")
+	os.Setenv("TELEGRAM_CHAT_ID", "1")
+	os.Setenv("SERVER_SECRET", "env-secret")
+	defer os.Unsetenv("TELEGRAM_BOT_TOKEN")
+	defer os.Unsetenv("TELEGRAM_CHAT_ID")
+	defer os.Unsetenv("SERVER_SECRET")
+
+	cfg, err := config.Load()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cfg.ServerSecret != "env-secret" {
+		t.Errorf("expected server_secret 'env-secret', got %q", cfg.ServerSecret)
+	}
+}
+
+func TestEnvSecretOverridesYAMLSecret(t *testing.T) {
+	clearEnv(t)
+	path := writeYAML(t, `
+telegram_bot_token: "tok"
+telegram_chat_id: "1"
+server_secret: "yaml-secret"
+`)
+	os.Setenv("CONFIG_FILE", path)
+	os.Setenv("SERVER_SECRET", "env-secret")
+	defer os.Unsetenv("CONFIG_FILE")
+	defer os.Unsetenv("SERVER_SECRET")
+
+	cfg, err := config.Load()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cfg.ServerSecret != "env-secret" {
+		t.Errorf("expected env secret to override yaml, got %q", cfg.ServerSecret)
+	}
+}
+
+func TestLoadNoSecretIsEmpty(t *testing.T) {
+	clearEnv(t)
+	os.Setenv("TELEGRAM_BOT_TOKEN", "tok")
+	os.Setenv("TELEGRAM_CHAT_ID", "1")
+	defer os.Unsetenv("TELEGRAM_BOT_TOKEN")
+	defer os.Unsetenv("TELEGRAM_CHAT_ID")
+
+	cfg, err := config.Load()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cfg.ServerSecret != "" {
+		t.Errorf("expected empty server_secret, got %q", cfg.ServerSecret)
 	}
 }

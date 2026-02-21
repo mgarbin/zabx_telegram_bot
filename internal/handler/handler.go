@@ -37,17 +37,21 @@ type ZabbixAlert struct {
 	Host        string      `json:"host"`
 	EventID     string      `json:"event_id"`
 	Message     string      `json:"message"`
+	Secret      string      `json:"secret"`
 }
 
 // Handler processes incoming Zabbix alerts.
 type Handler struct {
-	bot   Sender
-	store *store.MessageStore
+	bot    Sender
+	store  *store.MessageStore
+	secret string
 }
 
 // New creates a Handler wired to the given Telegram sender and message store.
-func New(bot Sender, s *store.MessageStore) *Handler {
-	return &Handler{bot: bot, store: s}
+// If secret is non-empty every incoming request must carry a matching "secret"
+// field in its JSON body; otherwise the request is rejected with 401.
+func New(bot Sender, s *store.MessageStore, secret string) *Handler {
+	return &Handler{bot: bot, store: s, secret: secret}
 }
 
 // ServeHTTP handles POST /zabbix/alert requests.
@@ -65,6 +69,11 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	if alert.TriggerID == "" {
 		http.Error(w, "trigger_id is required", http.StatusBadRequest)
+		return
+	}
+
+	if h.secret != "" && alert.Secret != h.secret {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 

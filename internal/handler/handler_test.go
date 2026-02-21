@@ -46,7 +46,7 @@ func postAlert(t *testing.T, h http.Handler, alert handler.ZabbixAlert) *httptes
 func TestProblemSendsNewMessage(t *testing.T) {
 	mb := &mockBot{}
 	s := store.New()
-	h := handler.New(mb, s)
+	h := handler.New(mb, s, "")
 
 	alert := handler.ZabbixAlert{
 		TriggerID:   "100",
@@ -74,7 +74,7 @@ func TestProblemSendsNewMessage(t *testing.T) {
 func TestResolvedEditsExistingMessage(t *testing.T) {
 	mb := &mockBot{}
 	s := store.New()
-	h := handler.New(mb, s)
+	h := handler.New(mb, s, "")
 
 	// First: a PROBLEM alert.
 	postAlert(t, h, handler.ZabbixAlert{
@@ -112,7 +112,7 @@ func TestResolvedEditsExistingMessage(t *testing.T) {
 func TestResolvedWithNoTrackedMessageSendsNew(t *testing.T) {
 	mb := &mockBot{}
 	s := store.New()
-	h := handler.New(mb, s)
+	h := handler.New(mb, s, "")
 
 	resp := postAlert(t, h, handler.ZabbixAlert{
 		TriggerID:   "300",
@@ -134,7 +134,7 @@ func TestResolvedWithNoTrackedMessageSendsNew(t *testing.T) {
 }
 
 func TestMethodNotAllowed(t *testing.T) {
-	h := handler.New(&mockBot{}, store.New())
+	h := handler.New(&mockBot{}, store.New(), "")
 	req := httptest.NewRequest(http.MethodGet, "/zabbix/alert", nil)
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, req)
@@ -145,7 +145,7 @@ func TestMethodNotAllowed(t *testing.T) {
 }
 
 func TestInvalidJSON(t *testing.T) {
-	h := handler.New(&mockBot{}, store.New())
+	h := handler.New(&mockBot{}, store.New(), "")
 	req := httptest.NewRequest(http.MethodPost, "/zabbix/alert", bytes.NewBufferString("{bad json"))
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, req)
@@ -156,7 +156,7 @@ func TestInvalidJSON(t *testing.T) {
 }
 
 func TestMissingTriggerID(t *testing.T) {
-	h := handler.New(&mockBot{}, store.New())
+	h := handler.New(&mockBot{}, store.New(), "")
 	resp := postAlert(t, h, handler.ZabbixAlert{
 		TriggerName: "Some trigger",
 		Status:      handler.StatusProblem,
@@ -164,5 +164,67 @@ func TestMissingTriggerID(t *testing.T) {
 
 	if resp.Code != http.StatusBadRequest {
 		t.Fatalf("expected 400 for missing trigger_id, got %d", resp.Code)
+	}
+}
+
+func TestSecretValidRequest(t *testing.T) {
+	mb := &mockBot{}
+	h := handler.New(mb, store.New(), "mysecret")
+
+	resp := postAlert(t, h, handler.ZabbixAlert{
+		TriggerID:   "400",
+		TriggerName: "High CPU",
+		Status:      handler.StatusProblem,
+		Secret:      "mysecret",
+	})
+
+	if resp.Code != http.StatusOK {
+		t.Fatalf("expected 200 with correct secret, got %d", resp.Code)
+	}
+}
+
+func TestSecretWrongValue(t *testing.T) {
+	h := handler.New(&mockBot{}, store.New(), "mysecret")
+
+	resp := postAlert(t, h, handler.ZabbixAlert{
+		TriggerID:   "401",
+		TriggerName: "High CPU",
+		Status:      handler.StatusProblem,
+		Secret:      "wrongsecret",
+	})
+
+	if resp.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401 with wrong secret, got %d", resp.Code)
+	}
+}
+
+func TestSecretMissing(t *testing.T) {
+	h := handler.New(&mockBot{}, store.New(), "mysecret")
+
+	resp := postAlert(t, h, handler.ZabbixAlert{
+		TriggerID:   "402",
+		TriggerName: "High CPU",
+		Status:      handler.StatusProblem,
+		// Secret omitted
+	})
+
+	if resp.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401 when secret is missing, got %d", resp.Code)
+	}
+}
+
+func TestNoSecretConfiguredAllowsAnyRequest(t *testing.T) {
+	mb := &mockBot{}
+	h := handler.New(mb, store.New(), "")
+
+	resp := postAlert(t, h, handler.ZabbixAlert{
+		TriggerID:   "403",
+		TriggerName: "High CPU",
+		Status:      handler.StatusProblem,
+		// No secret in body – should still be allowed when none configured
+	})
+
+	if resp.Code != http.StatusOK {
+		t.Fatalf("expected 200 when no secret configured, got %d", resp.Code)
 	}
 }

@@ -21,6 +21,10 @@ type Config struct {
 
 	// ServerAddr is the address the HTTP server listens on (e.g. ":8080").
 	ServerAddr string
+
+	// ServerSecret is an optional shared secret that must be present in the
+	// JSON body of every incoming request. When empty, no secret check is done.
+	ServerSecret string
 }
 
 // fileConfig mirrors the YAML structure of the optional config file.
@@ -28,6 +32,7 @@ type fileConfig struct {
 	TelegramToken string `yaml:"telegram_bot_token"`
 	ChatID        string `yaml:"telegram_chat_id"`
 	ServerAddr    string `yaml:"server_addr"`
+	ServerSecret  string `yaml:"server_secret"`
 }
 
 // Load reads configuration from an optional YAML file and environment variables.
@@ -41,6 +46,7 @@ type fileConfig struct {
 //   - TELEGRAM_BOT_TOKEN (required if not set in the file)
 //   - TELEGRAM_CHAT_ID   (required if not set in the file, numeric)
 //   - SERVER_ADDR        (optional, default ":8080")
+//   - SERVER_SECRET      (optional, shared secret for incoming requests)
 func Load() (*Config, error) {
 	fc, err := loadFile()
 	if err != nil {
@@ -75,10 +81,16 @@ func Load() (*Config, error) {
 		addr = ":8080"
 	}
 
+	secret := os.Getenv("SERVER_SECRET")
+	if secret == "" {
+		secret = fc.ServerSecret
+	}
+
 	return &Config{
 		TelegramToken: token,
 		ChatID:        chatID,
 		ServerAddr:    addr,
+		ServerSecret:  secret,
 	}, nil
 }
 

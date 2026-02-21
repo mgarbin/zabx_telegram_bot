@@ -44,7 +44,7 @@ func main() {
 	}
 
 	msgStore := store.New()
-	alertHandler := handler.New(tgBot, msgStore)
+	alertHandler := handler.New(tgBot, msgStore, cfg.ServerSecret)
 
 	mux := http.NewServeMux()
 	mux.Handle("/zabbix/alert", alertHandler)
