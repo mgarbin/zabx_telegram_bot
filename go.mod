@@ -1,4 +1,4 @@
-module github.com/mgarbin/zabx_telegram_bot
+module github.com/mgarbin/zabbix-telegram-event-correlator
 
 go 1.24.12
 

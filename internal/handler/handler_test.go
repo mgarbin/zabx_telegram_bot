@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mgarbin/zabx_telegram_bot/internal/handler"
-	"github.com/mgarbin/zabx_telegram_bot/internal/store"
+	"github.com/mgarbin/zabbix-telegram-event-correlator/internal/handler"
+	"github.com/mgarbin/zabbix-telegram-event-correlator/internal/store"
 )
 
 // mockBot records which method was last called and with which arguments.

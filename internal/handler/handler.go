@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mgarbin/zabx_telegram_bot/internal/store"
+	"github.com/mgarbin/zabbix-telegram-event-correlator/internal/store"
 )
 
 // Sender is the interface the handler uses to interact with Telegram.

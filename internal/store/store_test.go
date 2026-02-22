@@ -4,7 +4,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/mgarbin/zabx_telegram_bot/internal/store"
+	"github.com/mgarbin/zabbix-telegram-event-correlator/internal/store"
 )
 
 func TestSetAndGet(t *testing.T) {

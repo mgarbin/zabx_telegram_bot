@@ -26,10 +26,10 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/mgarbin/zabx_telegram_bot/config"
-	"github.com/mgarbin/zabx_telegram_bot/internal/bot"
-	"github.com/mgarbin/zabx_telegram_bot/internal/handler"
-	"github.com/mgarbin/zabx_telegram_bot/internal/store"
+	"github.com/mgarbin/zabbix-telegram-event-correlator/config"
+	"github.com/mgarbin/zabbix-telegram-event-correlator/internal/bot"
+	"github.com/mgarbin/zabbix-telegram-event-correlator/internal/handler"
+	"github.com/mgarbin/zabbix-telegram-event-correlator/internal/store"
 )
 
 func main() {
@@ -49,7 +49,7 @@ func main() {
 	mux := http.NewServeMux()
 	mux.Handle("/zabbix/alert", alertHandler)
 
-	log.Printf("zabx_telegram_bot listening on %s", cfg.ServerAddr)
+	log.Printf("zabbix-telegram-event-correlator listening on %s", cfg.ServerAddr)
 	if err := http.ListenAndServe(cfg.ServerAddr, mux); err != nil {
 		log.Fatalf("HTTP server error: %v", err)
 	}
