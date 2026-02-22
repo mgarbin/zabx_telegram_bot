@@ -47,6 +47,10 @@ telegram_chat_id: "-100987654321"
 
 # Optional – defaults to :8080
 # server_addr: ":8080"
+
+# Optional: shared secret that must be present in every incoming JSON body.
+# When set, requests without a matching "secret" field are rejected with 401.
+# server_secret: "change-me"
 ```
 
 A ready-to-edit template is provided as `config.yaml.example`.
@@ -87,7 +91,6 @@ The service starts an HTTP server on `:8080` (or the value of `SERVER_ADDR`).
   "secret":       "{API.SECRET}"
 }
 ```
-
 ### Accepted payload fields
 
 | Field          | Type   | Required | Description                                                                 |
@@ -100,6 +103,24 @@ The service starts an HTTP server on `:8080` (or the value of `SERVER_ADDR`).
 | `event_id`     | string |   ✅     | Zabbix event ID                                                             |
 | `message`      | string |          | Additional details / description                                            |
 | `secret`       | string |          | A secret key that allow to send payload to your http server in secure way   |
+
+---
+
+## Zabbix action setup
+
+1. In zabbix go to **Configuration -> Action -> Trigger Action**.
+2. Create a new trigger action.
+3. Into **Operation** tab inside the **Operations** section add a new one.
+4. **subject** of the new operation need this json :
+```json
+{"status":"PROBLEM","severity":"{EVENT.SEVERITY}","host":"{HOST.NAME}","eventId":"{EVENT.ID}","eventName":"{EVENT.NAME}"}
+```
+4. Inside the **message** you can ad other zabbix values as you want
+5. Into **Recovery operations** add a new one.
+6. **subject** ot he new operation need this json :
+```json
+{"status":"RESOLVED","host":"{HOST.NAME}","eventId":"{EVENT.ID}","eventName":"{EVENT.NAME}"}
+```
 
 ---
 
