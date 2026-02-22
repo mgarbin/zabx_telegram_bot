@@ -1,4 +1,4 @@
-# zabx_telegram_bot
+# zabbix-telegram-event-correlator
 
 A Go service that receives [Zabbix](https://www.zabbix.com/) trigger alerts via
 HTTP webhook and forwards them to a Telegram group chat using the
@@ -83,21 +83,23 @@ The service starts an HTTP server on `:8080` (or the value of `SERVER_ADDR`).
   "severity":     "{TRIGGER.SEVERITY}",
   "host":         "{HOST.NAME}",
   "event_id":     "{EVENT.ID}",
-  "message":      "{ALERT.MESSAGE}"
+  "message":      "{ALERT.MESSAGE}",
+  "secret":       "{API.SECRET}"
 }
 ```
 
 ### Accepted payload fields
 
-| Field          | Type   | Required | Description                         |
-|----------------|--------|----------|-------------------------------------|
-| `trigger_id`   | string | ✅       | Unique ID of the Zabbix trigger      |
-| `trigger_name` | string |          | Human-readable trigger name          |
-| `status`       | string |          | `PROBLEM` or `RESOLVED`              |
-| `severity`     | string |          | Trigger severity label               |
-| `host`         | string |          | Affected host name                   |
-| `event_id`     | string |          | Zabbix event ID                      |
-| `message`      | string |          | Additional details / description     |
+| Field          | Type   | Required | Description                                                                 |
+|----------------|--------|----------|-----------------------------------------------------------------------------|
+| `trigger_id`   | string |          | Unique ID of the Zabbix trigger                                             |
+| `trigger_name` | string |          | Human-readable trigger name                                                 |
+| `status`       | string |          | `PROBLEM` or `RESOLVED`                                                     |
+| `severity`     | string |          | Trigger severity label                                                      |
+| `host`         | string |          | Affected host name                                                          |
+| `event_id`     | string |   ✅     | Zabbix event ID                                                             |
+| `message`      | string |          | Additional details / description                                            |
+| `secret`       | string |          | A secret key that allow to send payload to your http server in secure way   |
 
 ---
 
@@ -114,7 +116,7 @@ The service starts an HTTP server on `:8080` (or the value of `SERVER_ADDR`).
 │   ├── handler/
 │   │   └── handler.go        # HTTP handler for POST /zabbix/alert
 │   └── store/
-│       └── store.go          # Thread-safe in-memory trigger→message-ID map
+│       └── store.go          # Thread-safe in-memory event-ID → message-ID map
 ```
 
 ---
