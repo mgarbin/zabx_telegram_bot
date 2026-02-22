@@ -1,0 +1,14 @@
+[Unit]
+Description=Zabbix telegram notifier written in GO
+After=syslog.target network.target
+
+[Service]
+RemainAfterExit=yes
+Type=simple
+Environment="CONFIG_FILE=/etc/zbx-notifier/config.yaml"
+ExecStart=/usr/local/bin/zabbix-telegram-notifier
+ExecStop=/usr/bin/killall zabbix-telegram-notifier
+TimeoutSec=400
+
+[Install]
+WantedBy=multi-user.target
