@@ -111,7 +111,7 @@ The service starts an HTTP server on `:8080` (or the value of `SERVER_ADDR`).
 1. In zabbix go to **Configuration -> Action -> Trigger Action**.
 2. Create a new trigger action.
 3. Into **Operation** tab inside the **Operations** section add a new one.
-4. **subject** of the new operation need this json :
+4. **subject** of the new operation need this json :  
 ```json
 {"status":"PROBLEM","severity":"{EVENT.SEVERITY}","host":"{HOST.NAME}","eventId":"{EVENT.ID}","eventName":"{EVENT.NAME}"}
 ```

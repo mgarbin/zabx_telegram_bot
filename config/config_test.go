@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/mgarbin/zabx_telegram_bot/config"
+	"github.com/mgarbin/zabbix-telegram-event-correlator/config"
 )
 
 // clearEnv unsets all env vars used by config.Load so tests are isolated.
