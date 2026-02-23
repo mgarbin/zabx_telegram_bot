@@ -51,6 +51,11 @@ telegram_chat_id: "-100987654321"
 # Optional: shared secret that must be present in every incoming JSON body.
 # When set, requests without a matching "secret" field are rejected with 401.
 # server_secret: "change-me"
+
+# Optional: enable Redis persistence ( restart will not lose on memory telegram messageId correlation )
+#redis_addr: "localhost:6379"
+#redis_password: ""   # optional
+#redis_db: 0          # optional, default 0
 ```
 
 A ready-to-edit template is provided as `config.yaml.example`.
@@ -128,6 +133,7 @@ ZbxNotifierKey -> 1234 ( must be the server_secret used in yaml file )
 │   │   └── handler.go        # HTTP handler for POST /zabbix/alert
 │   └── store/
 │       └── store.go          # Thread-safe in-memory event-ID → message-ID map
+|       └── redis_store.go    # Thread-safe in-memory event-ID → message-ID map using Redis
 ```
 
 ---
