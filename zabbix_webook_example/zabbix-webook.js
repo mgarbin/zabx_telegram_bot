@@ -1,31 +1,25 @@
 try {
-    var params = JSON.parse(value);
 
-    var zbx_subject = params.Subject;
-    var zbx_message = params.Message;
-    var zbx_notifier_key = params.ZbxNotifierKey;
+    Zabbix.log(4, "[Webhook] Raw: " + value);
 
-    if (!zbx_subject || !zbx_notifier_key) {
-        throw 'Missing required parameter: Message';
-    }
-
-    var zsbj = JSON.parse(zbx_subject)
+    var rawReq = JSON.parse(value);
 
     var req = new HttpRequest();
     req.addHeader('Content-Type: application/json');
 
     var body = JSON.stringify({
-      status:       zsbj.status,
-      trigger_id:   zsbj.triggerId,
-      severity:     zsbj.severity,
-      host:         zsbj.host,
-      event_id:     zsbj.eventId,
-      trigger_name: zsbj.eventName,
-      message:      zbx_message,
-      secret:       zbx_notifier_key
+      status:       rawReq.status,
+      severity:     rawReq.severity,
+      host:         rawReq.host,
+      event_id:     rawReq.eventId,
+      trigger_name: rawReq.eventName,
+      message:      rawReq.message,
+      secret:       rawReq.ZbxNotifierKey
     });
 
-    var response = req.post('https://' + window.location.host + '/zbx_telegram_notifier/', body);
+    Zabbix.log(4, "[Webhook] Body: " + body);
+
+    var response = req.post('https://' + rawReq.zabbixWebHost + '/zbx_telegram_notifier/', body);
     var status = req.getStatus();
 
     if (status < 200 || status >= 300) {

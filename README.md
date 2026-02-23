@@ -68,36 +68,13 @@ go run .
 
 The service starts an HTTP server on `:8080` (or the value of `SERVER_ADDR`).
 
----
-
-## Zabbix webhook setup
-
-1. In Zabbix go to **Administration → Media types → Create media type**.
-2. Choose **Webhook** as the type.
-3. Set the URL to `http://<your-server>:8080/zabbix/alert`.
-4. Set the HTTP method to **POST**.
-5. Set the Content-Type header to `application/json`.
-6. Map the following parameters to the message body:
-
-```json
-{
-  "trigger_id":   "{TRIGGER.ID}",
-  "trigger_name": "{TRIGGER.NAME}",
-  "status":       "{TRIGGER.STATUS}",
-  "severity":     "{TRIGGER.SEVERITY}",
-  "host":         "{HOST.NAME}",
-  "event_id":     "{EVENT.ID}",
-  "message":      "{ALERT.MESSAGE}",
-  "secret":       "{API.SECRET}"
-}
-```
 ### Accepted payload fields
 
 | Field          | Type   | Required | Description                                                                 |
 |----------------|--------|----------|-----------------------------------------------------------------------------|
 | `trigger_id`   | string |          | Unique ID of the Zabbix trigger                                             |
 | `trigger_name` | string |          | Human-readable trigger name                                                 |
-| `status`       | string |          | `PROBLEM` or `RESOLVED`                                                     |
+| `status`       | string |          | must be `PROBLEM` or `RESOLVED`                                             |
 | `severity`     | string |          | Trigger severity label                                                      |
 | `host`         | string |          | Affected host name                                                          |
 | `event_id`     | string |   ✅     | Zabbix event ID                                                             |
@@ -106,21 +83,34 @@ The service starts an HTTP server on `:8080` (or the value of `SERVER_ADDR`).
 
 ---
 
+## Zabbix webhook setup
+
+1. In Zabbix go to **Administration → Media types → Create media type**.
+2. Choose **Webhook** as the type.
+3. As parameter add the following : 
+```
+eventId -> {EVENT.ID}
+eventName -> {EVENT.NAME}
+host -> {HOST.NAME}
+message -> {ALERT.MESSAGE}
+severity -> {EVENT.SEVERITY}
+status -> {ALERT.SUBJECT}
+zabbixWebHost -> "changeme.example.com"
+ZbxNotifierKey -> 1234 ( must be the server_secret used in yaml file )
+```
+4. Use the example webhook inside **zabbix_webook_example** folder of this repo
+
+---
+
 ## Zabbix action setup
 
 1. In zabbix go to **Configuration -> Action -> Trigger Action**.
 2. Create a new trigger action.
 3. Into **Operation** tab inside the **Operations** section add a new one.
-4. **subject** of the new operation need this json :  
-```json
-{"status":"PROBLEM","severity":"{EVENT.SEVERITY}","host":"{HOST.NAME}","eventId":"{EVENT.ID}","eventName":"{EVENT.NAME}"}
-```
+4. **subject** value must be the word **PROBLEM**
 4. Inside the **message** you can ad other zabbix values as you want
 5. Into **Recovery operations** add a new one.
-6. **subject** ot he new operation need this json :
-```json
-{"status":"RESOLVED","host":"{HOST.NAME}","eventId":"{EVENT.ID}","eventName":"{EVENT.NAME}"}
-```
+6. **subject** value must be the word **RESOLVED**
 
 ---
 
