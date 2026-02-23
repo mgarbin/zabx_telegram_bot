@@ -45,14 +45,14 @@ type ZabbixAlert struct {
 // Handler processes incoming Zabbix alerts.
 type Handler struct {
 	bot    Sender
-	store  *store.MessageStore
+	store  store.Store
 	secret string
 }
 
 // New creates a Handler wired to the given Telegram sender and message store.
 // If secret is non-empty every incoming request must carry a matching "secret"
 // field in its JSON body; otherwise the request is rejected with 401.
-func New(bot Sender, s *store.MessageStore, secret string) *Handler {
+func New(bot Sender, s store.Store, secret string) *Handler {
 	return &Handler{bot: bot, store: s, secret: secret}
 }
 

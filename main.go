@@ -14,8 +14,11 @@
 //
 // Optional:
 //
-//	SERVER_ADDR  – listen address for the HTTP server (default ":8080")
-//	CONFIG_FILE  – path to the YAML configuration file (default "config.yaml")
+//	SERVER_ADDR     – listen address for the HTTP server (default ":8080")
+//	CONFIG_FILE     – path to the YAML configuration file (default "config.yaml")
+//	REDIS_ADDR      – host:port of a Redis-compatible server for persistent storage
+//	REDIS_PASSWORD  – password for the Redis server (optional)
+//	REDIS_DB        – Redis database index (default 0)
 //
 // Endpoint:
 //
@@ -43,7 +46,18 @@ func main() {
 		log.Fatalf("failed to create Telegram bot: %v", err)
 	}
 
-	msgStore := store.New()
+	var msgStore store.Store
+	if cfg.RedisAddr != "" {
+		log.Printf("using Redis store at %s (db %d)", cfg.RedisAddr, cfg.RedisDB)
+		rs := store.NewRedisStore(cfg.RedisAddr, cfg.RedisPassword, cfg.RedisDB)
+		if err := rs.Ping(); err != nil {
+			log.Fatalf("Redis connectivity check failed: %v", err)
+		}
+		msgStore = rs
+	} else {
+		msgStore = store.New()
+	}
+
 	alertHandler := handler.New(tgBot, msgStore, cfg.ServerSecret)
 
 	mux := http.NewServeMux()

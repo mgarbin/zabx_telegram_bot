@@ -25,6 +25,16 @@ type Config struct {
 	// ServerSecret is an optional shared secret that must be present in the
 	// JSON body of every incoming request. When empty, no secret check is done.
 	ServerSecret string
+
+	// RedisAddr is the host:port of the Redis-compatible server used to persist
+	// event-to-message correlations. When empty the in-memory store is used.
+	RedisAddr string
+
+	// RedisPassword is the optional password for the Redis server.
+	RedisPassword string
+
+	// RedisDB is the logical Redis database index (default 0).
+	RedisDB int
 }
 
 // fileConfig mirrors the YAML structure of the optional config file.
@@ -33,6 +43,9 @@ type fileConfig struct {
 	ChatID        string `yaml:"telegram_chat_id"`
 	ServerAddr    string `yaml:"server_addr"`
 	ServerSecret  string `yaml:"server_secret"`
+	RedisAddr     string `yaml:"redis_addr"`
+	RedisPassword string `yaml:"redis_password"`
+	RedisDB       string `yaml:"redis_db"`
 }
 
 // Load reads configuration from an optional YAML file and environment variables.
@@ -47,6 +60,9 @@ type fileConfig struct {
 //   - TELEGRAM_CHAT_ID   (required if not set in the file, numeric)
 //   - SERVER_ADDR        (optional, default ":8080")
 //   - SERVER_SECRET      (optional, shared secret for incoming requests)
+//   - REDIS_ADDR         (optional, host:port of Redis server; uses in-memory store when absent)
+//   - REDIS_PASSWORD     (optional, Redis server password)
+//   - REDIS_DB           (optional, Redis database index, default 0)
 func Load() (*Config, error) {
 	fc, err := loadFile()
 	if err != nil {
@@ -86,11 +102,36 @@ func Load() (*Config, error) {
 		secret = fc.ServerSecret
 	}
 
+	redisAddr := os.Getenv("REDIS_ADDR")
+	if redisAddr == "" {
+		redisAddr = fc.RedisAddr
+	}
+
+	redisPassword := os.Getenv("REDIS_PASSWORD")
+	if redisPassword == "" {
+		redisPassword = fc.RedisPassword
+	}
+
+	redisDBStr := os.Getenv("REDIS_DB")
+	if redisDBStr == "" {
+		redisDBStr = fc.RedisDB
+	}
+	redisDB := 0
+	if redisDBStr != "" {
+		redisDB, err = strconv.Atoi(redisDBStr)
+		if err != nil {
+			return nil, errors.New("REDIS_DB must be a valid integer")
+		}
+	}
+
 	return &Config{
 		TelegramToken: token,
 		ChatID:        chatID,
 		ServerAddr:    addr,
 		ServerSecret:  secret,
+		RedisAddr:     redisAddr,
+		RedisPassword: redisPassword,
+		RedisDB:       redisDB,
 	}, nil
 }
 
