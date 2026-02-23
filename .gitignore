@@ -1,2 +1,5 @@
 # Ignore the actual config file that may contain secrets
 config.yaml
+
+# Build output
+zabbix-telegram-notifier
