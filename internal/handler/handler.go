@@ -153,7 +153,7 @@ func formatMessage(a ZabbixAlert, now time.Time, startTime, origMessage string) 
 		sb.WriteString(fmt.Sprintf("🖥 <b>Host:</b> %s\n", escapeHTML(a.Host)))
 	}
 	if a.Severity != "" {
-		sb.WriteString(fmt.Sprintf("⚠️ <b>Severity:</b> %s\n", escapeHTML(a.Severity)))
+		sb.WriteString(fmt.Sprintf("%s <b>Severity:</b> %s\n", severityEmoji(a.Severity), escapeHTML(a.Severity)))
 	}
 	// For RESOLVED, preserve the original Details from the PROBLEM event (if any).
 	msg := a.Message
@@ -186,6 +186,25 @@ func statusEmoji(s AlertStatus) string {
 		return "✅"
 	default:
 		return "ℹ️"
+	}
+}
+
+func severityEmoji(sev string) string {
+	switch strings.ToUpper(sev) {
+	case "DISASTER":
+		return "💀"
+	case "HIGH":
+		return "🔥"
+	case "AVERAGE":
+		return "⚡"
+	case "WARNING":
+		return "⚠️"
+	case "INFORMATION":
+		return "ℹ️"
+	case "NOT_CLASSIFIED":
+		return "❓"
+	default:
+		return "❔"
 	}
 }
 
