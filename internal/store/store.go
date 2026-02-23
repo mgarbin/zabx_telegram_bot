@@ -1,10 +1,27 @@
-// Package store provides a thread-safe in-memory mapping from a Zabbix
-// trigger ID to the Telegram message ID that was sent for that trigger.
-// This allows the bot to edit an existing message when a trigger's status
-// changes (e.g. PROBLEM → RESOLVED) instead of posting a new one.
+// Package store provides a thread-safe mapping from a Zabbix trigger ID to
+// the Telegram message ID that was sent for that trigger. This allows the bot
+// to edit an existing message when a trigger's status changes (e.g.
+// PROBLEM → RESOLVED) instead of posting a new one.
+//
+// Two implementations are available:
+//   - MessageStore: in-memory store (default)
+//   - RedisStore:   Redis-backed store (enabled when a Redis address is configured)
 package store
 
 import "sync"
+
+// Store is the interface implemented by both the in-memory MessageStore and
+// the Redis-backed RedisStore.
+type Store interface {
+	// Set stores an Entry for the given event ID.
+	Set(eventID string, entry Entry)
+	// Get returns the Entry for the given event ID and a boolean indicating
+	// whether the entry exists. Returns false when the key is missing or on
+	// any backend error (which is logged internally).
+	Get(eventID string) (Entry, bool)
+	// Delete removes the entry for the given event ID.
+	Delete(eventID string)
+}
 
 // Entry holds the data persisted for a single PROBLEM event.
 type Entry struct {

@@ -13,3 +13,10 @@ telegram_chat_id: "-100987654321"
 # Optional: shared secret that must be present in every incoming JSON body.
 # When set, requests without a matching "secret" field are rejected with 401.
 # server_secret: "change-me"
+
+# Optional: Redis-compatible server for persistent event-to-message storage.
+# When redis_addr is set, event correlations survive service restarts.
+# When omitted, an in-memory store is used (data is lost on restart).
+# redis_addr: "localhost:6379"
+# redis_password: ""
+# redis_db: 0
